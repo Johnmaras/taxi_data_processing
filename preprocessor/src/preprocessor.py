@@ -1,13 +1,13 @@
 import os
 import csv
 import json
+
 import boto3
 
 
-def chunkit(l, n):
-    """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i:i + n]
+def upload_stream(data, kinesis_stream_name, kinesis_client):
+    data_json = json.dumps(data).encode()
+    kinesis_client.put_record(StreamName=kinesis_stream_name, Data=data_json, PartitionKey='sau')
 
 
 def handler(event, context):
@@ -19,14 +19,33 @@ def handler(event, context):
     """
 
     kinesis_stream_name = os.getenv("KINESIS_STREAM_NAME")  # importdata
-    userprofile = os.getenv("userprofile")
 
+    # Initialize AWS service clients
     kinesis = boto3.client("kinesis")
-    with open(rf"{userprofile}\PycharmProjects\taxi_data_processing\data\sub_set.csv") as f:
-        # Creating the ordered Dict
-        reader = csv.DictReader(f)
-        # putting the json as per the number of chunk we will give in below function
-        # Create the list of json and push like a chunk. I am sending 100 rows together
-        records = chunkit([{"PartitionKey": 'sau', "Data": json.dumps(row)} for row in reader], 100)
-    for chunk in records:
-        kinesis.put_records(StreamName=kinesis_stream_name, Records=chunk)
+    s3 = boto3.client("s3")
+
+    # Get data csv from AWS S3 storage
+    data_object = s3.get_object(Bucket="arn:aws:s3:eu-west-1:820495056858:accesspoint/taxi-data-ap",
+                                Key="sub_set_300.csv")
+    data = data_object["Body"].read().decode().splitlines()
+
+    # Read csv data and create JSON representation
+    reader = csv.DictReader(data)
+
+    mini_batch = []
+    i = 1
+    batch_id = 1
+
+    # Create mini-batches of 100 rows and put to AWS Kinesis stream
+    for row in reader:
+        mini_batch.append(row)
+        if i == 100:
+            upload_stream(mini_batch, kinesis_stream_name, kinesis)
+            # print(json.dumps(mini_batch), end="\n\n\n")
+            i = 0
+            batch_id += 1
+            mini_batch.clear()
+        i += 1
+    else:
+        # print(json.dumps(mini_batch), end="\n\n\n")
+        upload_stream(mini_batch, kinesis_stream_name, kinesis)

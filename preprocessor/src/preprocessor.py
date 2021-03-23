@@ -5,9 +5,9 @@ import json
 import boto3
 
 
-def upload_stream(data, kinesis_stream_name, kinesis_client):
-    data_json = json.dumps(data).encode()
-    kinesis_client.put_record(StreamName=kinesis_stream_name, Data=data_json, PartitionKey='sau')
+def send_message(data, queue_url, sqs_client):
+    data_json = json.dumps(data)
+    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="1")
 
 
 def handler(event, context):
@@ -18,11 +18,11 @@ def handler(event, context):
     :param context: AWS specific context object
     """
 
-    kinesis_stream_name = os.getenv("KINESIS_STREAM_NAME")  # importdata
-
     # Initialize AWS service clients
-    kinesis = boto3.client("kinesis")
     s3 = boto3.client("s3")
+    sqs_client = boto3.client("sqs")
+
+    queue_url = os.getenv("INITIAL_DATA_QUEUE")
 
     # Get data csv from AWS S3 storage
     data_object = s3.get_object(Bucket="arn:aws:s3:eu-west-1:820495056858:accesspoint/taxi-data-ap",
@@ -33,14 +33,15 @@ def handler(event, context):
     reader = csv.DictReader(data)
 
     mini_batch = []
+    mini_batch_size = 100
     i = 1
     batch_id = 1
 
     # Create mini-batches of 100 rows and put to AWS Kinesis stream
     for row in reader:
         mini_batch.append(row)
-        if i == 100:
-            upload_stream(mini_batch, kinesis_stream_name, kinesis)
+        if i == mini_batch_size:
+            send_message(mini_batch, queue_url,sqs_client)
             # print(json.dumps(mini_batch), end="\n\n\n")
             i = 0
             batch_id += 1
@@ -48,4 +49,4 @@ def handler(event, context):
         i += 1
     else:
         # print(json.dumps(mini_batch), end="\n\n\n")
-        upload_stream(mini_batch, kinesis_stream_name, kinesis)
+        send_message(mini_batch, queue_url, sqs_client)

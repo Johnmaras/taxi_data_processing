@@ -38,10 +38,11 @@ def handler(event, context):
     batch_id = 1
 
     # Create mini-batches of 100 rows and put to AWS Kinesis stream
+    print(f"Starting data streaming in mini batches of {mini_batch_size} lines")
     for row in reader:
         mini_batch.append(row)
         if i == mini_batch_size:
-            send_message(mini_batch, queue_url,sqs_client)
+            send_message(mini_batch, queue_url, sqs_client)
             # print(json.dumps(mini_batch), end="\n\n\n")
             i = 0
             batch_id += 1
@@ -50,3 +51,6 @@ def handler(event, context):
     else:
         # print(json.dumps(mini_batch), end="\n\n\n")
         send_message(mini_batch, queue_url, sqs_client)
+
+    return {"status_code": 200,
+            "body": f"Data streaming started in mini batches of {mini_batch_size} lines"}

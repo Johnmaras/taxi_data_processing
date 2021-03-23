@@ -7,7 +7,7 @@ import boto3
 
 def send_message(data, queue_url, sqs_client):
     data_json = json.dumps(data)
-    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="1")
+    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="initial-data-group")
 
 
 def handler(event, context):

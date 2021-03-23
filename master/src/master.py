@@ -1,7 +1,29 @@
-import base64
+import json
+import os
+
+import boto3
+
+
+def send_message(data, queue_url, sqs_client):
+    data_json = json.dumps(data)
+    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="worker-data-group")
 
 
 def handler(event, context):
-    for record in event['Records']:
-        payload = base64.b64decode(record["kinesis"]["data"])
-        print("Decoded stream: " + str(payload))
+    master_queue_url = os.getenv("MASTER_QUEUE_URL")
+    record = event["Records"][0]
+    message_id = record["messageId"]
+    receipt_handle = record["receiptHandle"]
+    data = record["body"]
+
+    print(f"Sending message {message_id} to workers")
+
+    sqs_client = boto3.client("sqs")
+
+    worker_queue_url = os.getenv("WORKER_QUEUE_URL")
+    send_message(data, worker_queue_url, sqs_client)
+
+    response = sqs_client.delete_message(QueueUrl=master_queue_url, ReceiptHandle=receipt_handle)
+
+    if response and response["ResponseMetadata"]["HTTPStatusCode"] == 200:
+        print(f"Message deleted successfully: {message_id}")

@@ -1,13 +1,16 @@
 import os
 import csv
 import json
+from random import randint
 
 import boto3
 
 
 def send_message(data, queue_url, sqs_client):
     data_json = json.dumps(data)
-    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="initial-data-group")
+    i = randint(1, 1000)
+    message_group_id = "initial-data-group" + str(i)
+    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId=message_group_id)
 
 
 def handler(event, context):
@@ -31,6 +34,10 @@ def handler(event, context):
 
     # Read csv data and create JSON representation
     reader = csv.DictReader(data)
+
+    # Purge queue
+    # sqs_client.purge_queue(QueueUrl=queue_url)
+    # time.sleep(60)
 
     mini_batch = []
     mini_batch_size = 100

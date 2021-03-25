@@ -1,12 +1,15 @@
 import json
 import os
+from random import randint
 
 import boto3
 
 
 def send_message(data, queue_url, sqs_client):
     data_json = json.dumps(data)
-    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId="worker-data-group")
+    i = randint(1, 1000)
+    message_group_id = "worker-data-group" + str(i)
+    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId=message_group_id)
 
 
 def handler(event, context):

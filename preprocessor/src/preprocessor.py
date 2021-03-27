@@ -44,7 +44,7 @@ def handler(event, context):
     i = 1
     batch_id = 1
 
-    # Create mini-batches of 100 rows and put to AWS Kinesis stream
+    # Create mini-batches of 100 rows and put to AWS SQS
     print(f"Starting data streaming in mini batches of {mini_batch_size} lines")
     for row in reader:
         mini_batch.append(row)

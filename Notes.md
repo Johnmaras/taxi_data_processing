@@ -19,5 +19,5 @@ to the server - Y=store and forward; N=not a store and forward trip
 ● trip_duration - duration of the trip in seconds
 
 ### Queries
-1. Split the map into quadrants. How many cabs started their route on each quadrant
+1. Split the map into quadrants. How many routes started from each quadrant
 2. Count routes R where: **l<sub>R</sub> > 1000m and t<sub>R</sub> > 10mins and p<sub>R</sub> > 2**

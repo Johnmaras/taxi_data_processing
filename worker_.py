@@ -2,7 +2,7 @@ import json
 import os
 from random import randint
 from typing import Tuple
-
+import time
 import boto3
 import math
 
@@ -24,61 +24,86 @@ def get_distance(latitude: Tuple, longitude: Tuple):
 
     return d
 
+def get_lat(latitude: Tuple):
+    lat = float(latitude[0])
+    
+    return lat
+    
+def get_lon(longitude: Tuple):
+    lon = float(longitude[0])
+    
+    return lon
+    
+def get_vendor(vid: Tuple):
+    vendor_id = int(vid[0])
+    
+    return vendor_id    
 
 def process_data(data: json):
-    # Query 1 init
     key_1 = 1
-    area_1 = 0
-    area_2 = 0
-    area_3 = 0
-    area_4 = 0
-    key_1_results = []
-    # End Query 1 init
-
-    # Query 2 init
     key_2 = 2
+    key_3 = 3
+
+    vendor_id_1 = []
+    vendor_id_2 = []
+    area_1 = []
+    area_2 = []
+    area_3 = []
+    area_4 = []
     key_2_results = []
-    # End Query 2 init
+    key_3_results = []
 
     # print(type(data))
 
     for record in data:
-        # TODO key_1
-
-        # print("Record" + str(record))
-
+        # Query 1:
+        cent_lat = float(40.76793672)
+        cent_lon = float(-73.98215480)
+        
+        lat_temp = (record["pickup_latitude"], record["dropoff_latitude"])
+        lon_temp = (record["pickup_longitude"], record["dropoff_longitude"])
+        
+        lat = get_lat(lat_temp)
+        lon = get_lon(lon_temp)
+        
+        if lat > cent_lat and lon < cent_lon:
+            area_1.append(record)
+        elif lat > cent_lat and lon > cent_lon:
+            area_2.append(record)
+        elif lat < cent_lat and lon < cent_lon:
+            area_3.append(record)
+        elif lat < cent_lat and lon > cent_lon:
+            area_4.append(record)
+            
+        # Query 3:
+        vid = (record["vendor_id"])
+        vendor_id = get_vendor(vid) 
+        
+        if vendor_id == 1:
+            vendor_id_1.append(record)
+        elif vendor_id ==2:
+            vendor_id_2.append(record)
+            
+		# Query 2:
         # Get values
-        latitude = (float(record["pickup_latitude"]), float(record["dropoff_latitude"]))
-        longitude = (float(record["pickup_longitude"]), float(record["dropoff_longitude"]))
+        latitude = (record["pickup_latitude"], record["dropoff_latitude"])
+        longitude = (record["pickup_longitude"], record["dropoff_longitude"])
 
-        # Query 1
-        ny_lat = 40.76793672
-        ny_lon = -73.98215480
-
-        lat = latitude[0]
-        lon = longitude[0]
-
-        if lat > ny_lat and lon < ny_lon:
-            area_1 += 1
-        elif lat > ny_lat and lon > ny_lon:
-            area_2 += 1
-        elif lat < ny_lat and lon < ny_lon:
-            area_3 += 1
-        elif lat < ny_lat and lon > ny_lon:
-            area_4 += 1
-        # End Query 1
-
-        # Query 2
         l_R = get_distance(latitude, longitude)
         t_R = int(record["trip_duration"]) / 60
         p_R = int(record["passenger_count"])
 
         if l_R > 1000 and t_R > 10 and p_R > 2:
             key_2_results.append(record)
-        # End Query 2
-
-    key_1_results = {"Area_1": area_1, "Area_2": area_2, "Area_3": area_3, "Area_4": area_4}
-    results = {key_1: key_1_results, key_2: key_2_results}
+    
+    a1 = len(area_1)
+    a2 = len(area_2)
+    a3 = len(area_3)
+    a4 = len(area_4)
+    vid1 = len(vendor_id_1)
+    vid2 = len(vendor_id_2)
+    
+    results = {key_1: " ", "Area:1": a1,"Area:2": a2, "Area3:": a3, "Area4:":a4, key_2: key_2_results, key_3: " ","Vendor 1:":vid1, "Vendor 2:": vid2}
 
     return results
 
@@ -91,7 +116,8 @@ def send_message(data, queue_url, sqs_client):
 
 
 def handler(event, context):
-    worker_queue_url = os.getenv("WORKER_QUEUE_URL")
+    start_time = time.time()
+    worker_queue_url = 'https://sqs.us-east-2.amazonaws.com/957241440788/workersqs.fifo'
     record = event["Records"][0]
     message_id = record["messageId"]
     receipt_handle = record["receiptHandle"]
@@ -111,12 +137,15 @@ def handler(event, context):
     sqs_client = boto3.client("sqs")
 
     # Send results to reducer queue
-    reducer_queue_url = os.getenv("REDUCER_QUEUE_URL")
+    reducer_queue_url = 'https://sqs.us-east-2.amazonaws.com/957241440788/reducersqs.fifo'
     results_json = json.dumps(results)
     send_message(results_json, reducer_queue_url, sqs_client)
 
-    sqs_client = boto3.client("sqs")
+    #sqs_client = boto3.client("sqs")
     response = sqs_client.delete_message(QueueUrl=worker_queue_url, ReceiptHandle=receipt_handle)
 
     if response and response["ResponseMetadata"]["HTTPStatusCode"] == 200:
         print(f"Message deleted successfully: {message_id}")
+
+    end_time = (time.time()-start_time)
+    print("Total time for worker job : ", end_time)

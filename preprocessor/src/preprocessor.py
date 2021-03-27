@@ -1,16 +1,31 @@
 import os
 import csv
-import json
-from random import randint
 
 import boto3
 
+import json
+import time
+from random import randint
+
+
+def get_message_deduplication_id(base_data_id: str) -> str:
+    time_nano_epoch = time.time_ns()
+    return base_data_id + str(time_nano_epoch)
+
 
 def send_message(data, queue_url, sqs_client):
+    base_data_id = "initial-data-group"
     data_json = json.dumps(data)
+
     i = randint(1, 1000)
-    message_group_id = "initial-data-group" + str(i)
-    sqs_client.send_message(QueueUrl=queue_url, MessageBody=data_json, MessageGroupId=message_group_id)
+    message_group_id = base_data_id + str(i)
+
+    message_deduplication_id = get_message_deduplication_id(base_data_id)
+
+    sqs_client.send_message(QueueUrl=queue_url,
+                            MessageBody=data_json,
+                            MessageGroupId=message_group_id,
+                            MessageDeduplicationId=message_deduplication_id)
 
 
 def handler(event, context):
@@ -35,7 +50,7 @@ def handler(event, context):
     # Read csv data and create JSON representation
     reader = csv.DictReader(data)
 
-    # Purge queue
+    # # Purge queue
     # sqs_client.purge_queue(QueueUrl=queue_url)
     # time.sleep(60)
 

@@ -41,11 +41,20 @@ def process_data(data: json):
     key_2_results = []
     # End Query 2 init
 
+    # Query 3 init
+    key_3 = 3
+    max_duration = 0
+    key_3_results = []
+    # End Query 3 init
+
     # print(type(data))
+    area_duration = ""
+
+    batch_id = list(data.keys())[0]
+    print(f"Processing batch: {batch_id}")
+    data = data[batch_id]
 
     for record in data:
-        # TODO key_1
-
         # print("Record" + str(record))
 
         # Get values
@@ -59,14 +68,30 @@ def process_data(data: json):
         lat = latitude[0]
         lon = longitude[0]
 
+        # Query 3
+        dur = int(record["trip_duration"])
+        duration = dur
+
         if lat > ny_lat and lon < ny_lon:
             area_1 += 1
+            if max_duration < duration:
+                max_duration = duration
+                area_duration = "Area 1"
         elif lat > ny_lat and lon > ny_lon:
             area_2 += 1
+            if max_duration < duration:
+                max_duration = duration
+                area_duration = "Area 2"
         elif lat < ny_lat and lon < ny_lon:
             area_3 += 1
+            if max_duration < duration:
+                max_duration = duration
+                area_duration = "Area 3"
         elif lat < ny_lat and lon > ny_lon:
             area_4 += 1
+            if max_duration < duration:
+                max_duration = duration
+                area_duration = "Area 4"
         # End Query 1
 
         # Query 2
@@ -78,8 +103,12 @@ def process_data(data: json):
             key_2_results.append(record)
         # End Query 2
 
+        # Query 3
+
     key_1_results = {"Area_1": area_1, "Area_2": area_2, "Area_3": area_3, "Area_4": area_4}
-    results = {key_1: key_1_results, key_2: key_2_results}
+    key_3_results = {area_duration: max_duration}
+
+    results = {batch_id: {key_1: key_1_results, key_2: key_2_results, key_3: key_3_results}}
 
     return results
 
@@ -110,10 +139,6 @@ def handler(event, context):
     message_id = record["messageId"]
     receipt_handle = record["receiptHandle"]
     data = record["body"]
-
-    # print(f"Got a message: messageID = {message_id}\n"
-    #       f"receiptHandle = {receipt_handle}\n"
-    #       f"body = {data}")
 
     # json_data = json.loads(data)
     json_data = json.loads(json.loads(data))

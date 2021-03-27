@@ -21,3 +21,6 @@ to the server - Y=store and forward; N=not a store and forward trip
 ### Queries
 1. Split the map into quadrants. How many routes started from each quadrant
 2. Count routes R where: **l<sub>R</sub> > 1000m and t<sub>R</sub> > 10mins and p<sub>R</sub> > 2**
+3. Find the quadrant of the biggest route
+4. Longest route
+5. Num of passengers for each vendor

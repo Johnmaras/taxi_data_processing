@@ -66,7 +66,8 @@ def handler(event, context):
     for row in reader:
         mini_batch.append(row)
         if i == mini_batch_size:
-            send_message(mini_batch, queue_url, sqs_client)
+            mini_batch_dict = {batch_id: mini_batch}
+            send_message(mini_batch_dict, queue_url, sqs_client)
             # print(json.dumps(mini_batch), end="\n\n\n")
             i = 0
             batch_id += 1
@@ -74,7 +75,8 @@ def handler(event, context):
         i += 1
     else:
         # print(json.dumps(mini_batch), end="\n\n\n")
-        send_message(mini_batch, queue_url, sqs_client)
+        mini_batch_dict = {batch_id: mini_batch}
+        send_message(mini_batch_dict, queue_url, sqs_client)
 
     return {"status_code": 200,
             "body": f"Data streaming started in mini batches of {mini_batch_size} lines"}

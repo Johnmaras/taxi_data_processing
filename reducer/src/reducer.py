@@ -5,7 +5,7 @@ import boto3
 
 
 def save_results(data, key, bucket, client):
-    file = key
+    file = "processing-results/" + key
     client.put_object(Bucket=bucket, Key=file, Body=data)
 
 
@@ -21,9 +21,12 @@ def handler(event, context):
     sqs_client = boto3.client("sqs")
 
     # TODO Write results to s3
-    # s3_client = boto3.client("s3")
+    s3_client = boto3.client("s3")
+    results_bucket = os.getenv("RESULTS_BUCKET_URL")
 
-    # save_results(data, worker_queue_url, sqs_client)
+    json_data = json.loads(data)
+
+    save_results(json_data, message_id, results_bucket, s3_client)
 
     response = sqs_client.delete_message(QueueUrl=master_queue_url, ReceiptHandle=receipt_handle)
 

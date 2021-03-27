@@ -41,10 +41,12 @@ def handler(event, context):
     sqs_client = boto3.client("sqs")
 
     queue_url = os.getenv("INITIAL_DATA_QUEUE")
+    bucket_ap = os.getenv("BUCKET_AP")
+    dataset_key = os.getenv("DATASET_KEY")
 
     # Get data csv from AWS S3 storage
-    data_object = s3.get_object(Bucket="arn:aws:s3:eu-west-1:820495056858:accesspoint/taxi-data-ap",
-                                Key="sub_set_300.csv")
+    data_object = s3.get_object(Bucket=bucket_ap,
+                                Key=dataset_key)
     data = data_object["Body"].read().decode().splitlines()
 
     # Read csv data and create JSON representation

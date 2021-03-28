@@ -30,26 +30,17 @@ def handler(event, context):
 
     print(f"Processing batch: {batch_id}")
 
+    base_bucket_filepath = "processing-results"
+
     for key in json_data:
-        file = "processing-results/" + key
+        # value_1 = {batch_id: json_data[key]}
+        value = json_data[key]
+        value = json.dumps(value)
 
-        value_1 = {batch_id: json_data[key]}
-        value = json.dumps(value_1)
-        try:
-            data_object = s3_client.get_object(Bucket=results_bucket,
-                                               Key=file)
+        bucket_folder_path = base_bucket_filepath + "/" + str(key)
+        bucket_filepath = bucket_folder_path + "/" + str(batch_id)
 
-            print(f"Data Object: {data_object}")
-
-            data = data_object["Body"].read().decode()
-            value += "," + data
-
-        except ClientError:
-            pass
-
-        print(f"Value: {value}")
-
-        save_results(value, file, results_bucket, s3_client)
+        save_results(value, bucket_filepath, results_bucket, s3_client)
 
     response = sqs_client.delete_message(QueueUrl=master_queue_url, ReceiptHandle=receipt_handle)
 

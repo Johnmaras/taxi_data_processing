@@ -26,34 +26,61 @@ def get_distance(latitude: Tuple, longitude: Tuple):
     return d
 
 
+def get_quadrant(latitude: Tuple, longitude: Tuple) -> str:
+    ny_lat = 40.76793672
+    ny_lon = -73.98215480
+
+    lat = latitude[0]
+    lon = longitude[0]
+
+    if lat > ny_lat and lon < ny_lon:
+        return "Area 1"
+    elif lat > ny_lat and lon > ny_lon:
+        return "Area 2"
+    elif lat < ny_lat and lon < ny_lon:
+        return "Area 3"
+    elif lat < ny_lat and lon > ny_lon:
+        return "Area 4"
+
+    return ""
+
+
 def process_data(data: json):
     # Query 1 init
-    key_1 = 1
-    area_1 = 0
-    area_2 = 0
-    area_3 = 0
-    area_4 = 0
+    key_1 = "Routes_Per_Quadrant"
+    areas = {"Area 1": 0, "Area 2": 0, "Area 3": 0, "Area 4": 0}
     key_1_results = []
     # End Query 1 init
 
     # Query 2 init
-    key_2 = 2
+    key_2 = "Routes_With_Spec_Chars"
     key_2_results = []
     # End Query 2 init
 
     # Query 3 init
-    key_3 = 3
+    key_3 = "Biggest_Route_Quadrant"
     max_duration = 0
-    key_3_results = []
+    max_duration_area = ""
     # End Query 3 init
 
+    # Query 4 init
+    key_4 = "Longest_Route"
+    # End Query 4 init
+
+    # Query 5 init
+    key_5 = "Passengers_Per_Vendor"
+    vendors_passengers = {}
+    key_5_results = []
+    # End Query 5 init
+
     # print(type(data))
-    area_duration = ""
 
     batch_id = list(data.keys())[0]
     print(f"Processing batch: {batch_id}")
     data = data[batch_id]
 
+    longest_route_len = 0
+    longest_route_record = {}
     for record in data:
         # print("Record" + str(record))
 
@@ -62,41 +89,17 @@ def process_data(data: json):
         longitude = (float(record["pickup_longitude"]), float(record["dropoff_longitude"]))
 
         # Query 1
-        ny_lat = 40.76793672
-        ny_lon = -73.98215480
-
-        lat = latitude[0]
-        lon = longitude[0]
-
-        # Query 3
-        dur = int(record["trip_duration"])
-        duration = dur
-
-        if lat > ny_lat and lon < ny_lon:
-            area_1 += 1
-            if max_duration < duration:
-                max_duration = duration
-                area_duration = "Area 1"
-        elif lat > ny_lat and lon > ny_lon:
-            area_2 += 1
-            if max_duration < duration:
-                max_duration = duration
-                area_duration = "Area 2"
-        elif lat < ny_lat and lon < ny_lon:
-            area_3 += 1
-            if max_duration < duration:
-                max_duration = duration
-                area_duration = "Area 3"
-        elif lat < ny_lat and lon > ny_lon:
-            area_4 += 1
-            if max_duration < duration:
-                max_duration = duration
-                area_duration = "Area 4"
+        quadrant = get_quadrant(latitude, longitude)
+        area_count = areas.get(quadrant,
+                               0)  # In case something wrong happend and no valid quadrant was returned by get_quadrant()
+        area_count += 1
+        areas[quadrant] = area_count
         # End Query 1
 
         # Query 2
         l_R = get_distance(latitude, longitude)
-        t_R = int(record["trip_duration"]) / 60
+        trip_duration = int(record["trip_duration"])
+        t_R = trip_duration / 60
         p_R = int(record["passenger_count"])
 
         if l_R > 1000 and t_R > 10 and p_R > 2:
@@ -104,11 +107,38 @@ def process_data(data: json):
         # End Query 2
 
         # Query 3
+        if max_duration < trip_duration:
+            max_duration = trip_duration
+            max_duration_area = quadrant
+        # End Query 3
 
-    key_1_results = {"Area_1": area_1, "Area_2": area_2, "Area_3": area_3, "Area_4": area_4}
-    key_3_results = {area_duration: max_duration}
+        # Query 4
+        if longest_route_len < l_R:
+            longest_route_len = l_R
+            longest_route_record = record
+        # End Query 4
 
-    results = {batch_id: {key_1: key_1_results, key_2: key_2_results, key_3: key_3_results}}
+        # Query 5
+        vendor_id = record["vendor_id"]
+        passengers = int(record["passenger_count"])
+        num_of_passengers = vendors_passengers.get(vendor_id, 0)
+        num_of_passengers += passengers
+        vendors_passengers[vendor_id] = num_of_passengers
+        # End Query 5
+
+    key_1_results = areas
+    key_3_results = {"Area": max_duration_area, "Route Time(secs)": max_duration}
+    key_4_results = {"Record": longest_route_record, "Route Length": longest_route_len}
+    for vendor_id in vendors_passengers:
+        passengers = vendors_passengers[vendor_id]
+        results_record = {"Vendor ID": vendor_id, "Passenger": passengers}
+        key_5_results.append(results_record)
+
+    results = {batch_id: {key_1: key_1_results,
+                          key_2: key_2_results,
+                          key_3: key_3_results,
+                          key_4: key_4_results,
+                          key_5: key_5_results}}
 
     return results
 

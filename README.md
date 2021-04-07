@@ -1,9 +1,14 @@
+### Services Used
+- AWS Lambda
+- AWS S3
+- AWS SQS
+
 ### Data files:
 - **sub_set.csv**: data/sub_set.csv and s3://taxi-data-processing-data/sub_set.csv
 - **sub_set_300.csv**: s3://taxi-data-processing-data/sub_set_300.csv
 - **fares.csv**: s3://taxi-data-processing-data/fares.csv
 
-Data fields
+#### Data fields
 - id - a unique identifier for each trip
 - vendor_id - a code indicating the provider associated with the trip record
 - pickup_datetime - date and time when the meter was engaged
@@ -24,7 +29,6 @@ to the server - Y=store and forward; N=not a store and forward trip
 3. Find the quadrant of the biggest route
 4. Longest route
 5. Num of passengers for each vendor
-
 
 ### Who
 - [anpetsa](https://github.com/anpetsa)
